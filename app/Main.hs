@@ -23,34 +23,36 @@ import Animation
     , bricksInPlace
     )
 
+-- | Management of the Initial State considering the Environment
+
 putInitialState :: Animation Env St ()
 putInitialState = do
-    (Env _ _ (width, height) _ baselength bricklength _ _ lifes _ _) <- ask
+    (Env _ _ (width, height) _ baselength bricklength lifes _ _) <- ask
     dirX <- lift $ lift $ fmap directionFromInt $ randomRIO (1, 2)
     
-    -- | Creation of a random number of blocks limited by a desired maximum number.
+    -- Creation of a random number of Bricks limited by a desired maximum number.
 
-    let maxBlocks = div (width * (height - 4)) . (*) bricklength in do
+    let maxBricks = div (width * (height - 4)) . (*) bricklength in do
 
-        randNumBlocks  <- lift $ lift $ randomRIO (0, maxBlocks 4)
+        randNumBricks  <- lift $ lift $ randomRIO (0, maxBricks 4)
     
-    -- | Creation of a list of DIFFERENT positions. The range of available positions has to be divided by the bricklength so
-    -- | we can introduce the bricklength space afterwards in order to get bricks not to overlap
+    -- Creation of a list of DIFFERENT positions. The range of available positions has to be divided by the bricklength so
+    -- we can introduce the bricklength space afterwards in order to get bricks not to overlap
         
-        distBlocks <-  fmap (nubBy (==)) $ sequence $ replicate (randNumBlocks) $ randomRIO (1, maxBlocks 1)
+        distBricks <-  fmap (nubBy (==)) $ sequence $ replicate (randNumBricks) $ randomRIO (1, maxBricks 1)
              
-    -- | Giving parameters to our initial state
+    -- Giving parameters to our initial state
         
         lift $ put $ St (div width 2, height - 2)
                         (dirX       , Negative  )
                         (div (width - baselength) 2)
-                        (bricksInPlace width distBlocks lifes bricklength) 
+                        (bricksInPlace width distBricks lifes bricklength) 
                         Nothing 
                         0 
                         [] 
                         Starting    
 
- -- | Management of the animation. Interrupted if game Restarted
+-- | Management of the animation. Interrupted if game Restarted
 
 animate :: Animation Env St ()
 animate = do

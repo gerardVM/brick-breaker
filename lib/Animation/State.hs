@@ -3,7 +3,7 @@ module Animation.State where
 import Control.Monad.Trans.State.Strict (get, put)
 import Control.Monad.Trans.Reader (ask)
 import Control.Monad.Trans.Class (lift)
-import System.IO (hReady, Handle(..), stdin, hSetEcho, hSetBuffering, BufferMode(NoBuffering))
+import System.IO (hReady, stdin, hSetEcho, hSetBuffering, BufferMode(NoBuffering))
 import Data.Char (toUpper, toLower)
 
 import Animation.Env (Env(..))
@@ -31,20 +31,20 @@ directionToMultiplier Neutral  =  0
 
 data St =
     St
-        { position     :: (Int, Int)
-        , direction    :: (Direction, Direction)
-        , bXPosition   :: Int
-        , bricks       :: [Object]
-        , walls        :: Maybe Object
-        , points       :: Int
-        , userInputs   :: [UserInput]
-        , status       :: GameStatus
+        { position     :: (Int, Int)                -- ^ Position of the ball
+        , direction    :: (Direction, Direction)    -- ^ Direction of the ball in N^2
+        , bXPosition   :: Int                       -- ^ Position X of the base
+        , bricks       :: [Object]                  -- ^ List of Bricks
+        , walls        :: Maybe Object              -- ^ Definition of Walls
+        , points       :: Int                       -- ^ Score (Every time a Brick is hit)
+        , userInputs   :: [UserInput]               -- ^ List of User's Input (This list is able to manage more than one input per frame)
+        , status       :: GameStatus                -- ^ Status of the Game
         }
 
--- | Allocation of the list of reduced positions in the game
--- | A reduced position is a 'x' value divided by the brick length
--- | Positions in this function are a list of 'x positions'. This means that
--- | given width = 50 then positions 49, 50, 51, 52,... correspond to points (49,0), (50,0), (1,1), (2,1),...
+{-|
+  Allocation of the list of reduced positions in the game. A reduced position is a 'x' value divided by the brick length.
+  Positions in this function are a list of 'x positions'. This means that given width = 50 then positions 49, 50, 51, 52,... correspond to points (49,0), (50,0), (1,1), (2,1),...
+-}
 
 bricksInPlace :: Int -> [Int] -> Int -> Int -> [Object]
 bricksInPlace width positions life bricklength = map (\x -> Brick (findPosition (bricklength*x) width 0) life) positions
@@ -66,7 +66,7 @@ getUserInput = go Nothing
                 if not waiting then return Nothing
                 else do
                       hSetBuffering stdin NoBuffering
-                      key <- getChar
+                      key  <- getChar
                       more <- hReady stdin
                       (if more then go else return) $ Just (stringToUserInput key)
                       where stringToUserInput x | x `isChar` 'a' = MoveLeft  
@@ -88,13 +88,14 @@ next = do
     input  <- lift $ lift $ getUserInput
     lift ( put ( nextInternal env input prevSt ) )
 
+
+-- | Management of next state according to GameStatus, UserInput and Previous State
+
 nextInternal :: Env -> Maybe UserInput -> St -> St
-nextInternal (Env _ _ (width, height) velocity baselength bricklength _ _ _ wallHeight wallsGap) 
+nextInternal (Env _ _ (width, height) velocity baselength bricklength _ wallHeight wallsGap) 
              userInput
              prevSt@(St (prevX, prevY) (prevXDir, prevYDir) prevBXPos prevBricks prevWalls prevPoints readInputs prevStatus)
              =
-    
- -- | Management of next state according to GameStatus and UserInput. UserInput is included in State to avoid the repetition delay issue.
    
     case prevStatus of
         Paused        -> case userInput of 
@@ -149,12 +150,12 @@ nextInternal (Env _ _ (width, height) velocity baselength bricklength _ _ _ wall
 
     where
  
- -- | New_Unbounded tells us which would be the position of the ball if there is no bounding
+ -- New_Unbounded tells us which would be the position of the ball if there is no bounding
    
     newXUnbounded          = prevX + directionToMultiplier prevXDir * velocity
     newYUnbounded          = prevY + directionToMultiplier prevYDir * velocity
 
- -- | Position control of the base limited by the width - Repeating Input interrupts the action
+ -- Position control of the base limited by the width - Repeating Input interrupts the action
     
     newBXPos = case prevStatus of 
                     Auto -> restricted (prevX - div baselength 2)
@@ -168,7 +169,7 @@ nextInternal (Env _ _ (width, height) velocity baselength bricklength _ _ _ wall
                                then 0
                                else position
 
- -- | Detection of collision with the base
+ -- Detection of collision with the base
     
     baseCollision          = newY >= height - 2 && newBXPos <= newX && newX <= newBXPos + baselength
 
@@ -177,15 +178,15 @@ nextInternal (Env _ _ (width, height) velocity baselength bricklength _ _ _ wall
                           && ( newBXPos              <= newX + newX - prevX 
                           &&   newBXPos + baselength >= newX + newX - prevX )
 
- -- | Auxiliary functions to consider the length of a brick, not just their position
- -- | completePositions returns a list of occupied positions given a list of Bricks
+ -- Auxiliary functions to consider the length of a brick, not just their position
+ -- completePositions returns a list of occupied positions given a list of Bricks
     
     addPositions (u,v) brl = zip [u .. (u + brl - 1)] $ take brl $ repeat v
     completePositions      = foldl (\x y -> x ++ addPositions (brickPosition y) bricklength) []
     
- -- | Identification of the coordinate that will be impacted according to ball direction for three 
- -- | different cases: Collision with top or botton (brickCollisionY), collision with one side (brickCollisionX)   
- -- | or collision with a corner (cornerCollision)
+ -- Identification of the coordinate that will be impacted according to ball direction for three 
+ -- different cases: Collision with top or botton (brickCollisionY), collision with one side (brickCollisionX)   
+ -- or collision with a corner (cornerCollision)
 
     targetX                = ( newX + directionToMultiplier prevXDir, newY)
     targetY                = ( newX, newY + directionToMultiplier prevYDir)
@@ -226,7 +227,7 @@ nextInternal (Env _ _ (width, height) velocity baselength bricklength _ _ _ wall
                                      in case w of (Left  xPos) -> condition xPos 
                                                   (Right xPos) -> condition xPos
 
- -- | Update positions and directions for next state
+ -- Update positions and directions for next state
     
     newX =
         case prevXDir of
@@ -257,15 +258,15 @@ nextInternal (Env _ _ (width, height) velocity baselength bricklength _ _ _ wall
                         then Positive
                         else Negative
     
- -- | Update status in case the player is unable to bounce back the ball
+ -- Update status in case the player is unable to bounce back the ball
     
     newStatus = if newY == height then Stopped else prevStatus
  
- -- | Update the score in case of any brick collision 
+ -- Update the score in case of any brick collision 
     
     newPoints = (+) prevPoints $ fromEnum $ xBrickBounce || yBrickBounce || bounceBack
 
- -- | Identification of the block that will be hit
+ -- Identification of the block that will be hit
 
     targetBricks = let identify target = filter (\u -> snd target == snd (brickPosition u) 
                                        && fst target -  fst (brickPosition u) < bricklength 
@@ -280,17 +281,17 @@ nextInternal (Env _ _ (width, height) velocity baselength bricklength _ _ _ wall
                                                                  else identify targetY ++ identify (fst targetX, bouncedTargetY)
                                                                  else []
 
- -- | Update the bricks state according to collisions. Brick disappears if life = 0
+ -- Update the bricks state according to collisions. Brick disappears if life = 0
     
     newBricks = foldl (flip changeBricks) prevBricks targetBricks
 
- -- | Update the life of the bricks
+ -- Update the life of the bricks
     
     changeBricks x bricks = let brickTail  = filter ((/=) (brickPosition x) . brickPosition) bricks
                                 brickHurt  = Brick (brickPosition x) (life x - 1)
                              in if life x > 0 then brickHurt : brickTail else brickTail
 
- -- | Update the state of the walls. Repeating Input interrupts the action
+ -- Update the state of the walls. Repeating Input interrupts the action
 
     newWalls = if elem RightWall readInputs then
                   case userInput of
@@ -307,7 +308,7 @@ nextInternal (Env _ _ (width, height) velocity baselength bricklength _ _ _ wall
                        Just RightWall -> Just $ Wall $ Right (width - wallsGap)
                        _              -> Nothing
 
- -- | Read & record the UserInputs - Repeating Input interrupts the action
+ -- Read & record the UserInputs - Repeating Input interrupts the action
 
     newInputs = let wallInputs = case newWalls of  
                      Just (Wall (Left _))  -> [LeftWall] 
@@ -315,11 +316,11 @@ nextInternal (Env _ _ (width, height) velocity baselength bricklength _ _ _ wall
                      _ -> []
                  in baseDecisionTree userInput readInputs (MoveLeft : wallInputs) (MoveRight : wallInputs) wallInputs
                            
- -- | Decision helper function
+ -- Decision helper function
 
-    baseDecisionTree uInput rInput efect1 efect2 noEfect = case uInput of 
-                                           Just MoveLeft  -> if not $ elem MoveRight rInput || elem MoveLeft  rInput then efect1 else noEfect
-                                           Just MoveRight -> if not $ elem MoveLeft  rInput || elem MoveRight rInput then efect2 else noEfect
-                                           _              -> if elem MoveLeft rInput && prevBXPos > 0 then efect1
-                                                               else if elem MoveRight rInput && prevBXPos + baselength < width then efect2
-                                                                 else noEfect
+    baseDecisionTree uInput rInput effect1 effect2 noEffect = case uInput of 
+                                           Just MoveLeft  -> if not $ elem MoveRight rInput || elem MoveLeft  rInput then effect1 else noEffect
+                                           Just MoveRight -> if not $ elem MoveLeft  rInput || elem MoveRight rInput then effect2 else noEffect
+                                           _              -> if elem MoveLeft rInput && prevBXPos > 0 then effect1
+                                                               else if elem MoveRight rInput && prevBXPos + baselength < width then effect2
+                                                                 else noEffect

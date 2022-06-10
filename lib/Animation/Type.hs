@@ -5,10 +5,10 @@ import Control.Monad.Trans.State.Strict (StateT(..), evalStateT)
 
 type Animation env st a = ReaderT env (StateT st IO) a
 
-data Object = Ball Int
-            | Base Int Int
-            | Wall (Either Int Int)
-            | Brick 
+data Object = Ball Int               -- ^ X position of the Ball
+            | Base Int Int           -- ^ X position and length of the Base
+            | Wall (Either Int Int)  -- ^ X position of Either Left or Right Wall
+            | Brick                  -- ^ Position and life of a Brick
                     { brickPosition :: (Int, Int) 
                     , life :: Int 
                     }

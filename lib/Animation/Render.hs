@@ -36,24 +36,26 @@ renderInternal env st = makeBox (size        env)
                                 (points      st )
                                 (title       env)
 
--- | Definition of how each line is going to be rendered according to what is there. Oprions are:
--- | 1) Nothing / 2) Just bricks / 3) Just the ball / 4) Just the base / 5) The ball and bricks /
--- | 6) The ball and the base / (The base and bricks is not an option)
--- | New cases: 7) Just Wall / 8) Ball and Wall / 9) Wall and Bricks  / 10) Ball and Wall And Bricks 
--- | 11) All of them combined with the limits of the Smart Walls which always appear
+{-|
+  Definition of how each line is going to be rendered according to what is there. Oprions are:
+  1) Nothing / 2) Just bricks / 3) Just the ball / 4) Just the base / 5) The ball and bricks /
+  6) The ball and the base / (The base and bricks is not an option)
+  New cases: 7) Just Wall / 8) Ball and Wall / 9) Wall and Bricks  / 10) Ball and Wall And Bricks 
+  11) All of them combined with the limits of the Smart Walls which always appear
+-}
 
-makeLine :: Char 
-         -> Char 
-         -> Char 
-         -> Char 
-         -> Int 
-         -> Maybe Int
-         -> Maybe Object 
-         -> Maybe Object
-         -> Maybe Object
-         -> [Object] 
-         -> Int
-         -> String
+makeLine :: Char            -- ^ External Char
+         -> Char            -- ^ Internal Char
+         -> Char            -- ^ Representation of the limits of the Walls when disabled
+         -> Char            -- ^ Representation of the Walls when enabled
+         -> Int             -- ^ Width of the Rendered Line
+         -> Maybe Int       -- ^ Gap of the Walls
+         -> Maybe Object    -- ^ The Ball 
+         -> Maybe Object    -- ^ The Base
+         -> Maybe Object    -- ^ The Walls
+         -> [Object]        -- ^ List of Bricks
+         -> Int             -- ^ Length of the Bricks
+         -> String          -- ^ Result
 
 makeLine eCh iCh wCh0 wCh1 i mWG mBall mBase mWall bricks bricklength =
     let positions = [0 .. i]
@@ -113,8 +115,8 @@ makeLine eCh iCh wCh0 wCh1 i mWG mBall mBase mWall bricks bricklength =
                                 
      in [eCh] ++ map renderPixel positions ++ [eCh]
      
-     -- | Finding if a pixel should belong to a brick considering its position and length
-     -- | If True, we paint it according to the life of the brick
+     -- Finding if a pixel should belong to a brick considering its position and length
+     -- If True, we paint it according to the life of the brick
      
      where brickXPositions = map (fst . brickPosition) bricks
            printBlock x ch = if x `elem` foldl (\u v  -> u ++ [v..(v+bricklength-1)]) [] brickXPositions
@@ -123,19 +125,21 @@ makeLine eCh iCh wCh0 wCh1 i mWG mBall mBase mWall bricks bricklength =
            pixelOwner x    = head $ filter (\u -> x - fst (brickPosition u) < bricklength
                                                && x - fst (brickPosition u) >= 0 ) bricks
 
-makeBox :: (Int, Int) 
-        -> Int 
-        -> Int 
-        -> (Int, Int) 
-        -> Int 
-        -> [Object] 
-        -> Int
-        -> Int
-        -> Maybe Object
-        -> GameStatus
-        -> Int
-        -> String
-        -> String
+-- | Definition of the box depending on what is going on in the Y axis
+
+makeBox :: (Int, Int)   -- ^ Size of the box
+        -> Int          -- ^ Length of the base
+        -> Int          -- ^ Position X of the base
+        -> (Int, Int)   -- ^ Position of the ball
+        -> Int          -- ^ Length of the Bricks
+        -> [Object]     -- ^ List of Bricks
+        -> Int          -- ^ Height of the walls
+        -> Int          -- ^ Gap of the Walls
+        -> Maybe Object -- ^ Status of the Wall
+        -> GameStatus   -- ^ Status of the Game
+        -> Int          -- ^ Score
+        -> String       -- ^ Title of the Game
+        -> String       -- ^ Result
 makeBox (numCols, numRows) baseL baseX (ballX, ballY) bricklength bricks wallHeight wG mWall status points title =
     unlines 
         ([" "] ++ [indent ++ take (div (numCols - length title + 4) 2) (repeat ' ') ++ title] ++ [" "] --  
@@ -149,11 +153,11 @@ makeBox (numCols, numRows) baseL baseX (ballX, ballY) bricklength bricks wallHei
                                  else  " | ***** GAME OVER ***** | Your Score is " ++ show points 
                                ]
                          
-                           -- | Render menu according to status
+                           -- Render menu according to status
                          
                             ++ [ case status of
 
-                                     Stopped       -> indent ++ "Press: (R) to Restart              "    ++ "\n" ++ "\n" -- ^ "\n" Necessary for inline space coherence
+                                     Stopped       -> indent ++ "Press: (R) to Restart              "    ++ "\n" ++ "\n" -- "\n" Necessary for inline space coherence
 
                                      Paused        -> indent ++ "Press (P) to keep playing / (SPACE) Auto Mode"  ++ "\n"
                                                    ++ indent ++ "Player 1: (A) Move Left       / (D) Move Right" ++ "\n"
@@ -170,10 +174,10 @@ makeBox (numCols, numRows) baseL baseX (ballX, ballY) bricklength bricks wallHei
                                      Auto          -> indent ++ "(P) Pause / (Q) Stop"                           ++ "\n"
                                                    ++ indent ++ "Pause the game to remove Auto Mode"             ++ "\n"
 
-                                     _             ->                                                       "\n" ++ "\n" -- ^ "\n" Necessary for inline space coherence
+                                     _             ->                                                       "\n" ++ "\n" -- "\n" Necessary for inline space coherence
                                ]
 
-                           -- | Uncomment these lines for debugging purposes 
+                           -- Uncomment these lines for debugging purposes 
 
 --                            ++ [  "BaseX: " ++ show (baseX + div baseL 2) 
 --                               ++ " | Ball: (" ++ show ballX ++ "," ++ show ballY ++ ")"
@@ -184,12 +188,12 @@ makeBox (numCols, numRows) baseL baseX (ballX, ballY) bricklength bricks wallHei
     where   indent          = take 20 $ repeat ' '
             mappedPositions = map lineMaker [0 .. numRows]
 
-         -- | Painting lines depending on the Y of the different elements
+         -- Painting lines depending on the Y of the different elements
             
             lineMaker y =
               let brickYPositions  = filter ((==) y . snd . brickPosition) bricks
 
-         -- | Conditions to choose which part of the Smart Walls needs to be painted
+         -- Conditions to choose which part of the Smart Walls needs to be painted
 
                   yWallBallRange y = abs (y - ballY)        <=   1 
 
@@ -271,7 +275,7 @@ makeBox (numCols, numRows) baseL baseX (ballX, ballY) bricklength bricks wallHei
                                     ++"\n"++indent++"           `V)V)=*.','  ,'"
                                     ++"\n"++indent++"               (V(V)(V)/"
 
-            {-
+            {-  This is another option for a Celebration Cartoon
                                     "                        .-."
                                 ++"\n                _.--¨¨¨¨.o/         .-.-._"
                                 ++"\n             __'   .¨¨¨; {        _J ,__  `.       Level Complete"
