@@ -1,4 +1,4 @@
-# ENHANCED 2 PLAYERS BRICK BREAKER VIDEOGAME
+# 2 PLAYERS BRICK BREAKER VIDEOGAME
 
 Delivered version of Brick Breaker videogame for Cardano Developer Program (EMURGO)
 
