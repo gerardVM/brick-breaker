@@ -3,6 +3,7 @@ module Main where
 import Control.Concurrent (threadDelay)
 import System.Random (randomRIO)
 import Data.List (nubBy)
+import GHC.IO.Encoding
 
 import Control.Monad.Trans.State.Strict (put, get)
 import Control.Monad.Trans.Reader (ask)
@@ -72,4 +73,5 @@ mainAnimation = do
 
 main :: IO ()
 main = do
+    setLocaleEncoding utf8
     runAnimation defaultEnv defaultSt mainAnimation
