@@ -22,6 +22,10 @@ cd brick-breaker &&
 docker build -t brick-breaker . &&
 docker run --rm -it brick-breaker
 ```
+or run the pre-built Docker image
+```bash
+docker run --rm -it gerardvm/brick-breaker
+```
 
 ## Usage
 
