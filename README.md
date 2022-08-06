@@ -8,21 +8,8 @@ Delivered version of Brick Breaker videogame for Cardano Developer Program (EMUR
 
 ## Installation
 
-Clone this repository and run cabal
+Run the Docker image
 
-```bash
-git clone https://github.com/gerardVM/brick-breaker.git &&
-cd brick-breaker &&
-cabal run
-```
-or clone this repository and build the Docker image from the Dockerfile
-```bash
-git clone https://github.com/gerardVM/brick-breaker.git &&
-cd brick-breaker &&
-docker build -t brick-breaker . &&
-docker run --rm -it brick-breaker
-```
-or run the pre-built Docker image
 ```bash
 docker run --rm -it gerardvm/brick-breaker
 ```
