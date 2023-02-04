@@ -8,10 +8,10 @@ Delivered version of Brick Breaker videogame for Cardano Developer Program (EMUR
 
 ## Installation
 
-Run the Docker image
+Clone this repository and build and run the Docker image
 
 ```bash
-docker run --rm -it gerardvm/brick-breaker
+docker build -t bb-2p . && docker run --rm -it bb-2p
 ```
 
 ## Usage
